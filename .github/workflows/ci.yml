@@ -23,7 +23,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DDMOD_MODE=DMOD_MODULE
+          cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_CPU_FAMILY=x86_64
           cmake --build .
 
       - name: Verify module files
