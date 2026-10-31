@@ -81,7 +81,9 @@ jobs:
           # assembles build_$ARCH_DIR_NAME/packages/<module>/ for every module
           # defined in this repo's CMake config - nothing left to do here but
           # discover whatever got packaged, add release notes, and zip it.
-          cmake .. -DDMOD_TOOLS_NAME=arch/${{ matrix.arch_name }} -DDMOD_MODULE_VERSION="${{ steps.get_version.outputs.version }}"
+          # Only the headers of dmflash are taken (dmflash_ioctl.h), and they are the same in every package of it; its
+          # manifest is per cpu_family, which an architecture does not have
+          cmake .. -DDMOD_TOOLS_NAME=arch/${{ matrix.arch_name }} -DDMOD_CPU_FAMILY=x86_64 -DDMOD_MODULE_VERSION="${{ steps.get_version.outputs.version }}"
           cmake --build .
 
           echo "Build completed for ${{ matrix.arch_name }}"
