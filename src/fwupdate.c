@@ -10,8 +10,10 @@
  *   fwupdate write <image> [bank] [--select | --trial]
  *   fwupdate verify <bank>
  *   fwupdate select <bank> [--trial]
+ *   fwupdate confirm
  *
- * The banks, their state, the verification and the choice belong to the platform (the Dmod_Firmware* functions of the
+ * confirm: the running firmware says it works (Dmod_FirmwareReady): a unit of the image runs it once everything the image
+ * needs is up (After=/Requires= say what), see README.md. The banks, their state, the verification and the choice belong to the platform (the Dmod_Firmware* functions of the
  * SAL); the bytes go through the dmflash node of the bank (/dev/dmflashx/bank_<a, b, ...>), which reaches only the
  * sectors of its bank. The running bank is never written: without [bank] the image goes to the other one.
  */
@@ -24,11 +26,18 @@
 #define IMAGE_HEADER_AREA   512u            /* Written last: a bank whose write was interrupted has no header */
 #define IMAGE_SIZE_OFFSET   8u
 
-static const char* const g_state_names[] = { "empty", "invalid", "valid", "trial", "confirmed" };
-
+/* A switch, not a table of pointers: a module has no relocated data */
 static const char* state_name(uint32_t state)
 {
-    return state < sizeof(g_state_names) / sizeof(g_state_names[0]) ? g_state_names[state] : "?";
+    switch(state)
+    {
+        case Dmod_FirmwareBankState_Empty:      return "empty";
+        case Dmod_FirmwareBankState_Invalid:    return "invalid";
+        case Dmod_FirmwareBankState_Valid:      return "valid";
+        case Dmod_FirmwareBankState_Trial:      return "trial";
+        case Dmod_FirmwareBankState_Confirmed:  return "confirmed";
+        default:                                return "?";
+    }
 }
 
 static char bank_letter(int bank)
@@ -272,12 +281,25 @@ close_image:
     return result;
 }
 
+static int cmd_confirm(void)
+{
+    int ret = Dmod_FirmwareReady();
+    if (ret != 0)
+    {
+        Dmod_Printf("fwupdate: cannot confirm (%d)\n", ret);
+        return 1;
+    }
+    Dmod_Printf("fwupdate: the running firmware is confirmed\n");
+    return 0;
+}
+
 static int usage(void)
 {
     Dmod_Printf("usage: fwupdate status\n"
                 "       fwupdate write <image> [bank] [--select | --trial]\n"
                 "       fwupdate verify <bank>\n"
-                "       fwupdate select <bank> [--trial]\n");
+                "       fwupdate select <bank> [--trial]\n"
+                "       fwupdate confirm\n");
     return 1;
 }
 
@@ -304,6 +326,9 @@ int main(int argc, char* argv[])
 
     if (strcmp(argv[1], "status") == 0 && positional_count == 0)
         return cmd_status();
+
+    if (strcmp(argv[1], "confirm") == 0 && positional_count == 0 && !select)
+        return cmd_confirm();
 
     if (strcmp(argv[1], "write") == 0 && positional_count >= 1)
     {

@@ -16,3 +16,21 @@ written last, so an interrupted write leaves an empty bank, not a half image.
 `--trial`: the platform goes back to the previous bank when the new firmware does not confirm (`Dmod_FirmwareReady`).
 
 Build against a dmflash checkout until it is released: `-DDMFLASH_INCLUDE_DIR=<dmflash>/include`.
+
+## Confirming a start
+
+`fwupdate confirm` calls `Dmod_FirmwareReady()`. What "the firmware works" means is the image's to say: a oneshot unit
+that runs it after what the image needs (`after=` / `requires=`), e.g. in `cfg/services/bootok.ini`:
+
+```
+description=Confirm the boot of the firmware
+exec=fwupdate
+args=confirm
+type=oneshot
+restart=no
+after=ext
+requires=ext
+```
+
+A firmware started on trial (`--trial`) that does not confirm in the number of starts the selector allows is dropped, and the
+previous bank starts.
